@@ -9,7 +9,7 @@ import (
 	"net/http/httputil"
 	"sync/atomic"
 
-	"github.com/calebdoxsey/kubernetes-simple-proxy/watcher"
+	"github.com/calebdoxsey/kubernetes-simple-ingress-controller/watcher"
 	"github.com/rs/zerolog/log"
 	"golang.org/x/sync/errgroup"
 )
@@ -75,6 +75,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "upstream server not found", http.StatusNotFound)
 		return
 	}
+	log.Info().Str("host", r.Host).Str("path", r.URL.Path).Str("backend", backendURL.String()).Msg("proxying request")
 	p := httputil.NewSingleHostReverseProxy(backendURL)
 	p.ErrorLog = stdlog.New(log.Logger, "", 0)
 	p.ServeHTTP(w, r)

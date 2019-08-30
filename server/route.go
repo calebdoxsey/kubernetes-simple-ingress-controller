@@ -8,7 +8,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/calebdoxsey/kubernetes-simple-proxy/watcher"
+	"github.com/calebdoxsey/kubernetes-simple-ingress-controller/watcher"
 	"github.com/rs/zerolog/log"
 	extensionsv1beta1 "k8s.io/api/extensions/v1beta1"
 	"k8s.io/apimachinery/pkg/util/intstr"

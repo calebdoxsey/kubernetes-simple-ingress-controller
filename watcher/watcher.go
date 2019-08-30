@@ -142,17 +142,25 @@ func (w *Watcher) Run(ctx context.Context) error {
 	var wg sync.WaitGroup
 	wg.Add(1)
 	go func() {
-		secretInformer := factory.Core().V1().Secrets().Informer()
-		secretInformer.AddEventHandler(handler)
-		secretInformer.Run(ctx.Done())
+		informer := factory.Core().V1().Secrets().Informer()
+		informer.AddEventHandler(handler)
+		informer.Run(ctx.Done())
 		wg.Done()
 	}()
 
 	wg.Add(1)
 	go func() {
-		ingressInformer := factory.Extensions().V1beta1().Ingresses().Informer()
-		ingressInformer.AddEventHandler(handler)
-		ingressInformer.Run(ctx.Done())
+		informer := factory.Extensions().V1beta1().Ingresses().Informer()
+		informer.AddEventHandler(handler)
+		informer.Run(ctx.Done())
+		wg.Done()
+	}()
+
+	wg.Add(1)
+	go func() {
+		informer := factory.Core().V1().Services().Informer()
+		informer.AddEventHandler(handler)
+		informer.Run(ctx.Done())
 		wg.Done()
 	}()
 

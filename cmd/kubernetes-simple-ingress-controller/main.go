@@ -6,8 +6,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/calebdoxsey/kubernetes-simple-proxy/server"
-	"github.com/calebdoxsey/kubernetes-simple-proxy/watcher"
+	"github.com/calebdoxsey/kubernetes-simple-ingress-controller/server"
+	"github.com/calebdoxsey/kubernetes-simple-ingress-controller/watcher"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"golang.org/x/sync/errgroup"
@@ -61,7 +61,7 @@ func getKubernetesConfig() *rest.Config {
 		config, err = clientcmd.BuildConfigFromFlags("", filepath.Join(homeDir(), ".kube", "config"))
 	}
 	if err != nil {
-		log.Fatal().Err(err).Msg("failed to get kubernetes in-cluster configuration")
+		log.Fatal().Err(err).Msg("failed to get kubernetes configuration")
 	}
 	return config
 }

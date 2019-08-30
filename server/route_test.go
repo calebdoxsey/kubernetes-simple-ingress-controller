@@ -5,7 +5,7 @@ import (
 	"net/url"
 	"testing"
 
-	"github.com/calebdoxsey/kubernetes-simple-proxy/watcher"
+	"github.com/calebdoxsey/kubernetes-simple-ingress-controller/watcher"
 	"github.com/stretchr/testify/assert"
 	extensionsv1beta1 "k8s.io/api/extensions/v1beta1"
 	"k8s.io/apimachinery/pkg/util/intstr"
