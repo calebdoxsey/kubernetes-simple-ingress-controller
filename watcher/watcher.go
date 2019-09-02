@@ -8,7 +8,6 @@ import (
 
 	"github.com/bep/debounce"
 	"github.com/rs/zerolog/log"
-	corev1 "k8s.io/api/core/v1"
 	extensionsv1beta1 "k8s.io/api/extensions/v1beta1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/informers"
@@ -20,7 +19,6 @@ import (
 type Payload struct {
 	Ingresses       []IngressPayload
 	TLSCertificates map[string]*tls.Certificate
-	Services        []*corev1.Service
 }
 
 // An IngressPayload is an ingress + its service ports.

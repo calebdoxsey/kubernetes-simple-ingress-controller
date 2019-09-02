@@ -18,6 +18,8 @@ import (
 type Server struct {
 	cfg          *config
 	routingTable atomic.Value
+
+	ready *Event
 }
 
 // New creates a new Server.
@@ -27,7 +29,8 @@ func New(options ...Option) *Server {
 		o(cfg)
 	}
 	s := &Server{
-		cfg: cfg,
+		cfg:   cfg,
+		ready: NewEvent(),
 	}
 	s.routingTable.Store(NewRoutingTable(nil))
 	return s
@@ -35,6 +38,9 @@ func New(options ...Option) *Server {
 
 // Run runs the server.
 func (s *Server) Run(ctx context.Context) error {
+	// don't start listening until the first payload
+	s.ready.Wait(ctx)
+
 	var eg errgroup.Group
 	eg.Go(func() error {
 		srv := http.Server{
@@ -84,4 +90,5 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 // Update updates the server with new ingress rules.
 func (s *Server) Update(payload *watcher.Payload) {
 	s.routingTable.Store(NewRoutingTable(payload))
+	s.ready.Set()
 }
