@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io"
 	stdlog "log"
-	"net"
 	"net/http"
 	"net/http/httputil"
 	"strings"
@@ -93,17 +92,11 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	log.Info().Str("host", r.Host).Str("path", r.URL.Path).Str("backend", backendURL.String()).Msg("proxying request")
 	p := httputil.NewSingleHostReverseProxy(backendURL)
-	p.Transport =
-		&http2.Transport{
+	if backendURL.Scheme == "https" {
+		p.Transport = &http2.Transport{
 			AllowHTTP: true,
-			DialTLS: func(network, addr string, cfg *tls.Config) (net.Conn, error) {
-				ta, err := net.ResolveTCPAddr(network, addr)
-				if err != nil {
-					return nil, err
-				}
-				return net.DialTCP(network, nil, ta)
-			},
 		}
+	}
 	p.ErrorLog = stdlog.New(log.Logger, "", 0)
 	p.ServeHTTP(w, r)
 }
