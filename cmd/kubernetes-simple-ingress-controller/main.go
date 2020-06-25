@@ -43,12 +43,12 @@ func main() {
 		s.Update(payload)
 	})
 
-	var eg errgroup.Group
+	eg, ctx := errgroup.WithContext(context.Background())
 	eg.Go(func() error {
-		return s.Run(context.TODO())
+		return s.Run(ctx)
 	})
 	eg.Go(func() error {
-		return w.Run(context.TODO())
+		return w.Run(ctx)
 	})
 	if err := eg.Wait(); err != nil {
 		log.Fatal().Err(err).Send()

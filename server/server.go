@@ -1,13 +1,16 @@
 package server
 
 import (
+	"bufio"
 	"context"
 	"crypto/tls"
 	"fmt"
+	"io"
 	stdlog "log"
 	"net"
 	"net/http"
 	"net/http/httputil"
+	"strings"
 	"sync/atomic"
 
 	"github.com/calebdoxsey/kubernetes-simple-ingress-controller/watcher"
@@ -43,11 +46,15 @@ func (s *Server) Run(ctx context.Context) error {
 	// don't start listening until the first payload
 	s.ready.Wait(ctx)
 
+	pr, pw := io.Pipe()
+	go readHTTPLogs(pr)
+
 	var eg errgroup.Group
 	eg.Go(func() error {
 		srv := http.Server{
-			Addr:    fmt.Sprintf("%s:%d", s.cfg.host, s.cfg.tlsPort),
-			Handler: s,
+			Addr:     fmt.Sprintf("%s:%d", s.cfg.host, s.cfg.tlsPort),
+			Handler:  s,
+			ErrorLog: stdlog.New(pw, "", 0),
 		}
 		srv.TLSConfig = &tls.Config{
 			GetCertificate: func(hello *tls.ClientHelloInfo) (*tls.Certificate, error) {
@@ -63,8 +70,9 @@ func (s *Server) Run(ctx context.Context) error {
 	})
 	eg.Go(func() error {
 		srv := http.Server{
-			Addr:    fmt.Sprintf("%s:%d", s.cfg.host, s.cfg.port),
-			Handler: s,
+			Addr:     fmt.Sprintf("%s:%d", s.cfg.host, s.cfg.port),
+			Handler:  s,
+			ErrorLog: stdlog.New(pw, "", 0),
 		}
 		log.Info().Str("addr", srv.Addr).Msg("starting insecure HTTP server")
 		err := srv.ListenAndServe()
@@ -104,4 +112,15 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 func (s *Server) Update(payload *watcher.Payload) {
 	s.routingTable.Store(NewRoutingTable(payload))
 	s.ready.Set()
+}
+
+func readHTTPLogs(r io.Reader) {
+	br := bufio.NewReader(r)
+	for {
+		ln, err := br.ReadString('\n')
+		if err != nil {
+			return
+		}
+		log.Info().Msg(strings.TrimSpace(ln))
+	}
 }

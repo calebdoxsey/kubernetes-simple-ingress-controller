@@ -14,6 +14,8 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
+const BackendProtocolAnnotation = "kubernetes-simple-ingress-controller/backend-protocol"
+
 // A RoutingTable contains the information needed to route a request.
 type RoutingTable struct {
 	certificatesByHost map[string]map[string]*tls.Certificate
@@ -25,10 +27,10 @@ type routingTableBackend struct {
 	url    *url.URL
 }
 
-func newRoutingTableBackend(path string, serviceName string, servicePort int) (routingTableBackend, error) {
+func newRoutingTableBackend(scheme string, path string, serviceName string, servicePort int) (routingTableBackend, error) {
 	rtb := routingTableBackend{
 		url: &url.URL{
-			Scheme: "http",
+			Scheme: scheme,
 			Host:   fmt.Sprintf("%s:%d", serviceName, servicePort),
 		},
 	}
@@ -81,10 +83,16 @@ func (rt *RoutingTable) init(payload *watcher.Payload) {
 }
 
 func (rt *RoutingTable) addBackend(ingressPayload watcher.IngressPayload, rule extensionsv1beta1.IngressRule) {
+	scheme, ok := ingressPayload.Ingress.Annotations[BackendProtocolAnnotation]
+	if !ok {
+		scheme = "http"
+	}
+	scheme = strings.ToLower(scheme)
+
 	if rule.HTTP == nil {
 		if ingressPayload.Ingress.Spec.Backend != nil {
 			backend := ingressPayload.Ingress.Spec.Backend
-			rtb, err := newRoutingTableBackend("", backend.ServiceName,
+			rtb, err := newRoutingTableBackend("http", "", backend.ServiceName,
 				rt.getServicePort(ingressPayload, backend.ServiceName, backend.ServicePort))
 			if err != nil {
 				// this shouldn't happen
@@ -96,7 +104,7 @@ func (rt *RoutingTable) addBackend(ingressPayload watcher.IngressPayload, rule e
 	} else {
 		for _, path := range rule.HTTP.Paths {
 			backend := path.Backend
-			rtb, err := newRoutingTableBackend(path.Path, backend.ServiceName,
+			rtb, err := newRoutingTableBackend("https", path.Path, backend.ServiceName,
 				rt.getServicePort(ingressPayload, backend.ServiceName, backend.ServicePort))
 			if err != nil {
 				log.Error().Err(err).Interface("path", path).Msg("invalid ingress rule path regex")
@@ -139,7 +147,7 @@ func (rt *RoutingTable) GetCertificate(sni string) (*tls.Certificate, error) {
 			}
 		}
 	}
-	return nil, errors.New("certificate not found")
+	return nil, fmt.Errorf("certificate not found for %s", sni)
 }
 
 // GetBackend gets the backend for the given host and path.
