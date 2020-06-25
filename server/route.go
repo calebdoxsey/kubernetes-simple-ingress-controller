@@ -92,7 +92,7 @@ func (rt *RoutingTable) addBackend(ingressPayload watcher.IngressPayload, rule e
 	if rule.HTTP == nil {
 		if ingressPayload.Ingress.Spec.Backend != nil {
 			backend := ingressPayload.Ingress.Spec.Backend
-			rtb, err := newRoutingTableBackend("http", "", backend.ServiceName,
+			rtb, err := newRoutingTableBackend(scheme, "", backend.ServiceName,
 				rt.getServicePort(ingressPayload, backend.ServiceName, backend.ServicePort))
 			if err != nil {
 				// this shouldn't happen
@@ -104,7 +104,7 @@ func (rt *RoutingTable) addBackend(ingressPayload watcher.IngressPayload, rule e
 	} else {
 		for _, path := range rule.HTTP.Paths {
 			backend := path.Backend
-			rtb, err := newRoutingTableBackend("https", path.Path, backend.ServiceName,
+			rtb, err := newRoutingTableBackend(scheme, path.Path, backend.ServiceName,
 				rt.getServicePort(ingressPayload, backend.ServiceName, backend.ServicePort))
 			if err != nil {
 				log.Error().Err(err).Interface("path", path).Msg("invalid ingress rule path regex")
