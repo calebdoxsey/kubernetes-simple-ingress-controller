@@ -10,7 +10,7 @@ import (
 
 	"github.com/calebdoxsey/kubernetes-simple-ingress-controller/watcher"
 	"github.com/rs/zerolog/log"
-	extensionsv1beta1 "k8s.io/api/extensions/v1beta1"
+	networking "k8s.io/api/networking/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
@@ -82,7 +82,7 @@ func (rt *RoutingTable) init(payload *watcher.Payload) {
 	}
 }
 
-func (rt *RoutingTable) addBackend(ingressPayload watcher.IngressPayload, rule extensionsv1beta1.IngressRule) {
+func (rt *RoutingTable) addBackend(ingressPayload watcher.IngressPayload, rule networking.IngressRule) {
 	scheme, ok := ingressPayload.Ingress.Annotations[BackendProtocolAnnotation]
 	if !ok {
 		scheme = "http"
@@ -90,10 +90,10 @@ func (rt *RoutingTable) addBackend(ingressPayload watcher.IngressPayload, rule e
 	scheme = strings.ToLower(scheme)
 
 	if rule.HTTP == nil {
-		if ingressPayload.Ingress.Spec.Backend != nil {
-			backend := ingressPayload.Ingress.Spec.Backend
-			rtb, err := newRoutingTableBackend(scheme, "", backend.ServiceName,
-				rt.getServicePort(ingressPayload, backend.ServiceName, backend.ServicePort))
+		if ingressPayload.Ingress.Spec.DefaultBackend != nil {
+			backend := ingressPayload.Ingress.Spec.DefaultBackend
+			rtb, err := newRoutingTableBackend(scheme, "", backend.Service.Name,
+				rt.getServicePort(ingressPayload, backend.Service.Name, intstr.FromInt(int(backend.Service.Port.Number))))
 			if err != nil {
 				// this shouldn't happen
 				log.Error().Err(err).Send()
@@ -104,8 +104,8 @@ func (rt *RoutingTable) addBackend(ingressPayload watcher.IngressPayload, rule e
 	} else {
 		for _, path := range rule.HTTP.Paths {
 			backend := path.Backend
-			rtb, err := newRoutingTableBackend(scheme, path.Path, backend.ServiceName,
-				rt.getServicePort(ingressPayload, backend.ServiceName, backend.ServicePort))
+			rtb, err := newRoutingTableBackend(scheme, path.Path, backend.Service.Name,
+				rt.getServicePort(ingressPayload, backend.Service.Name, intstr.FromInt(int(backend.Service.Port.Number))))
 			if err != nil {
 				log.Error().Err(err).Interface("path", path).Msg("invalid ingress rule path regex")
 				continue
