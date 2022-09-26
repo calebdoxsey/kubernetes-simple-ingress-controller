@@ -14,7 +14,6 @@ import (
 	"github.com/calebdoxsey/kubernetes-simple-ingress-controller/watcher"
 	"github.com/stretchr/testify/assert"
 	networking "k8s.io/api/networking/v1"
-	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
 func TestServer(t *testing.T) {
@@ -66,7 +65,7 @@ func TestServer(t *testing.T) {
 										Service: &networking.IngressServiceBackend{
 											Name: "127.0.0.1",
 											Port: networking.ServiceBackendPort{
-												Number: intstr.FromString("port-a").IntVal,
+												Number: int32(svcAPort),
 											},
 										},
 									}},
