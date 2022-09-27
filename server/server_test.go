@@ -13,8 +13,7 @@ import (
 
 	"github.com/calebdoxsey/kubernetes-simple-ingress-controller/watcher"
 	"github.com/stretchr/testify/assert"
-	extensionsv1beta1 "k8s.io/api/extensions/v1beta1"
-	"k8s.io/apimachinery/pkg/util/intstr"
+	networking "k8s.io/api/networking/v1"
 )
 
 func TestServer(t *testing.T) {
@@ -55,21 +54,24 @@ func TestServer(t *testing.T) {
 	s.Update(&watcher.Payload{
 		Ingresses: []watcher.IngressPayload{
 			{
-				Ingress: &extensionsv1beta1.Ingress{
-					Spec: extensionsv1beta1.IngressSpec{
-						Rules: []extensionsv1beta1.IngressRule{{
+				Ingress: &networking.Ingress{
+					Spec: networking.IngressSpec{
+						Rules: []networking.IngressRule{{
 							Host: "www.example.com",
-							IngressRuleValue: extensionsv1beta1.IngressRuleValue{HTTP: &extensionsv1beta1.HTTPIngressRuleValue{
-								Paths: []extensionsv1beta1.HTTPIngressPath{{
+							IngressRuleValue: networking.IngressRuleValue{HTTP: &networking.HTTPIngressRuleValue{
+								Paths: []networking.HTTPIngressPath{{
 									Path: "/",
-									Backend: extensionsv1beta1.IngressBackend{
-										ServiceName: "127.0.0.1",
-										ServicePort: intstr.FromString("port-a"),
-									},
+									Backend: networking.IngressBackend{
+										Service: &networking.IngressServiceBackend{
+											Name: "127.0.0.1",
+											Port: networking.ServiceBackendPort{
+												Number: int32(svcAPort),
+											},
+										},
+									}},
 								}},
 							}},
 						}},
-					},
 				},
 				ServicePorts: map[string]map[string]int{
 					"127.0.0.1": {
@@ -99,7 +101,7 @@ func TestServer(t *testing.T) {
 
 }
 
-func getFreePort(t *testing.T) (int) {
+func getFreePort(t *testing.T) int {
 	li, err := net.Listen("tcp4", "127.0.0.1:0")
 	if err != nil {
 		t.Fatal(err)

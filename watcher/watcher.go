@@ -8,7 +8,7 @@ import (
 
 	"github.com/bep/debounce"
 	"github.com/rs/zerolog/log"
-	extensionsv1beta1 "k8s.io/api/extensions/v1beta1"
+	networking "k8s.io/api/networking/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
@@ -23,7 +23,7 @@ type Payload struct {
 
 // An IngressPayload is an ingress + its service ports.
 type IngressPayload struct {
-	Ingress      *extensionsv1beta1.Ingress
+	Ingress      *networking.Ingress
 	ServicePorts map[string]map[string]int
 }
 
@@ -46,14 +46,14 @@ func (w *Watcher) Run(ctx context.Context) error {
 	factory := informers.NewSharedInformerFactory(w.client, time.Minute)
 	secretLister := factory.Core().V1().Secrets().Lister()
 	serviceLister := factory.Core().V1().Services().Lister()
-	ingressLister := factory.Extensions().V1beta1().Ingresses().Lister()
+	ingressLister := factory.Networking().V1().Ingresses().Lister()
 
-	addBackend := func(ingressPayload *IngressPayload, backend extensionsv1beta1.IngressBackend) {
-		svc, err := serviceLister.Services(ingressPayload.Ingress.Namespace).Get(backend.ServiceName)
+	addBackend := func(ingressPayload *IngressPayload, backend networking.IngressBackend) {
+		svc, err := serviceLister.Services(ingressPayload.Ingress.Namespace).Get(backend.Service.Name)
 		if err != nil {
 			log.Error().Err(err).
 				Str("namespace", ingressPayload.Ingress.Namespace).
-				Str("name", backend.ServiceName).
+				Str("name", backend.Service.Name).
 				Msg("unknown service")
 		} else {
 			m := make(map[string]int)
@@ -82,8 +82,8 @@ func (w *Watcher) Run(ctx context.Context) error {
 			}
 			payload.Ingresses = append(payload.Ingresses, ingressPayload)
 
-			if ingress.Spec.Backend != nil {
-				addBackend(&ingressPayload, *ingress.Spec.Backend)
+			if ingress.Spec.DefaultBackend != nil {
+				addBackend(&ingressPayload, *ingress.Spec.DefaultBackend)
 			}
 			for _, rule := range ingress.Spec.Rules {
 				if rule.HTTP != nil {
@@ -148,7 +148,7 @@ func (w *Watcher) Run(ctx context.Context) error {
 
 	wg.Add(1)
 	go func() {
-		informer := factory.Extensions().V1beta1().Ingresses().Informer()
+		informer := factory.Networking().V1().Ingresses().Informer()
 		informer.AddEventHandler(handler)
 		informer.Run(ctx.Done())
 		wg.Done()

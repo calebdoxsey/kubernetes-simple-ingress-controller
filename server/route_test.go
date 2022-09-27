@@ -7,8 +7,7 @@ import (
 
 	"github.com/calebdoxsey/kubernetes-simple-ingress-controller/watcher"
 	"github.com/stretchr/testify/assert"
-	extensionsv1beta1 "k8s.io/api/extensions/v1beta1"
-	"k8s.io/apimachinery/pkg/util/intstr"
+	networking "k8s.io/api/networking/v1"
 )
 
 func TestRoutingTable(t *testing.T) {
@@ -25,11 +24,14 @@ func TestRoutingTable(t *testing.T) {
 	t.Run("default backend with no rules", func(t *testing.T) {
 		rt := NewRoutingTable(&watcher.Payload{
 			Ingresses: []watcher.IngressPayload{{
-				Ingress: &extensionsv1beta1.Ingress{Spec: extensionsv1beta1.IngressSpec{
-					Backend: &extensionsv1beta1.IngressBackend{
-						ServiceName: "example.default.svc.cluster.local",
-						ServicePort: intstr.FromInt(80),
-					},
+				Ingress: &networking.Ingress{Spec: networking.IngressSpec{
+					DefaultBackend: &networking.IngressBackend{
+						Service: &networking.IngressServiceBackend{
+							Name: "example.default.svc.cluster.local",
+							Port: networking.ServiceBackendPort{
+								Number: 80,
+							},
+						}},
 				}},
 			}},
 		})
@@ -40,42 +42,23 @@ func TestRoutingTable(t *testing.T) {
 	t.Run("default backend with host rule", func(t *testing.T) {
 		rt := NewRoutingTable(&watcher.Payload{
 			Ingresses: []watcher.IngressPayload{{
-				Ingress: &extensionsv1beta1.Ingress{Spec: extensionsv1beta1.IngressSpec{
-					Backend: &extensionsv1beta1.IngressBackend{
-						ServiceName: "example",
-						ServicePort: intstr.FromInt(80),
+				Ingress: &networking.Ingress{Spec: networking.IngressSpec{
+					DefaultBackend: &networking.IngressBackend{
+						Service: &networking.IngressServiceBackend{
+							Name: "example",
+							Port: networking.ServiceBackendPort{
+								Number: 80,
+							},
+						},
 					},
-					Rules: []extensionsv1beta1.IngressRule{{
+					Rules: []networking.IngressRule{{
 						Host: "www.example.com",
 					}},
 				}},
 			}},
-		})
+		},
+		)
 		u, err := rt.GetBackend("www.example.com:8443", "/users/1234")
-		assert.NoError(t, err)
-		assert.Equal(t, &url.URL{
-			Scheme: "http",
-			Host:   "example:80",
-		}, u)
-	})
-	t.Run("default backend with named port", func(t *testing.T) {
-		rt := NewRoutingTable(&watcher.Payload{
-			Ingresses: []watcher.IngressPayload{{
-				Ingress: &extensionsv1beta1.Ingress{Spec: extensionsv1beta1.IngressSpec{
-					Backend: &extensionsv1beta1.IngressBackend{
-						ServiceName: "example",
-						ServicePort: intstr.FromString("http"),
-					},
-					Rules: []extensionsv1beta1.IngressRule{{
-						Host: "www.example.com",
-					}},
-				}},
-				ServicePorts: map[string]map[string]int{
-					"example": {"http": 80},
-				},
-			}},
-		})
-		u, err := rt.GetBackend("www.example.com", "/users/1234")
 		assert.NoError(t, err)
 		assert.Equal(t, &url.URL{
 			Scheme: "http",
@@ -86,17 +69,38 @@ func TestRoutingTable(t *testing.T) {
 		cert1 := new(tls.Certificate)
 		rt := NewRoutingTable(&watcher.Payload{
 			Ingresses: []watcher.IngressPayload{{
-				Ingress: &extensionsv1beta1.Ingress{Spec: extensionsv1beta1.IngressSpec{
-					Backend: &extensionsv1beta1.IngressBackend{
-						ServiceName: "example.default.svc.cluster.local",
-						ServicePort: intstr.FromInt(80),
+				Ingress: &networking.Ingress{Spec: networking.IngressSpec{
+					DefaultBackend: &networking.IngressBackend{
+						Service: &networking.IngressServiceBackend{
+							Name: "example.default.svc.cluster.local",
+							Port: networking.ServiceBackendPort{
+								Number: 80,
+							},
+						},
 					},
-					TLS: []extensionsv1beta1.IngressTLS{{
+					TLS: []networking.IngressTLS{{
 						Hosts:      []string{"www.example.com"},
 						SecretName: "example",
 					}},
-					Rules: []extensionsv1beta1.IngressRule{{
+					Rules: []networking.IngressRule{{
 						Host: "www.example.com",
+						IngressRuleValue: networking.IngressRuleValue{
+							HTTP: &networking.HTTPIngressRuleValue{
+								Paths: []networking.HTTPIngressPath{
+									networking.HTTPIngressPath{
+										Path: "/",
+										Backend: networking.IngressBackend{
+											Service: &networking.IngressServiceBackend{
+												Name: "example",
+												Port: networking.ServiceBackendPort{
+													Number: 80,
+												},
+											},
+										},
+									},
+								},
+							},
+						},
 					}},
 				}},
 			}},
@@ -112,16 +116,20 @@ func TestRoutingTable(t *testing.T) {
 		cert1 := new(tls.Certificate)
 		rt := NewRoutingTable(&watcher.Payload{
 			Ingresses: []watcher.IngressPayload{{
-				Ingress: &extensionsv1beta1.Ingress{Spec: extensionsv1beta1.IngressSpec{
-					Backend: &extensionsv1beta1.IngressBackend{
-						ServiceName: "example.default.svc.cluster.local",
-						ServicePort: intstr.FromInt(80),
+				Ingress: &networking.Ingress{Spec: networking.IngressSpec{
+					DefaultBackend: &networking.IngressBackend{
+						Service: &networking.IngressServiceBackend{
+							Name: "example.default.svc.cluster.local",
+							Port: networking.ServiceBackendPort{
+								Number: 80,
+							},
+						},
 					},
-					TLS: []extensionsv1beta1.IngressTLS{{
+					TLS: []networking.IngressTLS{{
 						Hosts:      []string{"*.example.com"},
 						SecretName: "example",
 					}},
-					Rules: []extensionsv1beta1.IngressRule{{
+					Rules: []networking.IngressRule{{
 						Host: "www.example.com",
 					}},
 				}},

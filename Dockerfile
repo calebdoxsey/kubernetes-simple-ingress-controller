@@ -1,4 +1,4 @@
-FROM golang:1.13-rc-alpine
+FROM golang:1.19-rc-alpine
 
 RUN apk add --update \
     ca-certificates \
